@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Testing
+.coverage
+.pytest_cache/
+.tox/
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Backup files (don't backup the backups!)
+backups/
+*.backup
+*.tar.gz
+
+# Environment
+.env
+.env.*
+venv/
+.venv/
+
+# Logs
+*.log
+logs/
