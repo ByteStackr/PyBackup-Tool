@@ -638,68 +638,6 @@ python -m json.tool .pybackup.json > /dev/null && echo "Valid JSON" || echo "Inv
 python PyBackup_Tool.py backup --config .pybackup.json -v
 ```
 
-## Best Practices
-
-### 1. Configuration Management
-- **Commit config files** to version control (except sensitive destinations)
-- **Use relative paths** for portability
-- **Document custom patterns** in comments (JSON doesn't support comments, use separate docs)
-- **Test configurations** before production use
-
-### 2. Backup Strategy
-- **Regular backups** - Set up automated daily/weekly backups
-- **Version important milestones** - Manual backups before major changes
-- **Test restores** - Regularly verify backup integrity
-- **Multiple locations** - Store backups in different locations/drives
-
-### 3. Security
-- **Don't backup sensitive files** - Exclude .env, credentials, keys
-- **Secure backup storage** - Protect backup destinations
-- **Verify checksums** - Always enable checksum verification
-- **Review patterns** - Regularly audit include/exclude patterns
-
-### 4. Maintenance
-- **Monitor disk usage** - Set up cleanup policies
-- **Update configurations** - Adjust patterns as project evolves
-- **Archive old backups** - Move old backups to long-term storage
-- **Document procedures** - Keep backup/restore procedures documented
-
-### 5. Team Workflows
-- **Standardize configurations** - Use same patterns across team
-- **Share backup strategies** - Document team backup practices
-- **Coordinate retention** - Agree on backup retention policies
-- **Emergency procedures** - Plan for disaster recovery scenarios
-
-## FAQ
-
-### Q: Can I backup to cloud storage?
-A: Yes, set the destination to a mounted cloud drive or network location:
-```json
-{
-    "destination": "/mnt/cloud-drive/backups"
-}
-```
-
-### Q: How do I backup only changed files?
-A: PyBackup_Tool creates full backups. For incremental backups, use external tools or implement custom logic.
-
-### Q: Can I encrypt backups?
-A: PyBackup_Tool doesn't include encryption. Use external tools:
-```bash
-# Create encrypted backup
-python PyBackup_Tool.py backup
-gpg --cipher-algo AES256 --compress-algo 1 --symmetric --output backup.tar.gz.gpg backup.tar.gz
-```
-
-### Q: What's the maximum backup size?
-A: Limited by available disk space and Python's file handling capabilities. Tested with multi-GB backups.
-
-### Q: Can I run this on older Python versions?
-A: Requires Python 3.6+. For older versions, some features may need modification.
-
-### Q: How do I contribute or report bugs?
-A: This is a standalone tool. For modifications, edit the source code directly or create your own version.
-
 ## License
 
 This tool is provided as-is under the MIT License. You're free to modify and distribute it according to your needs.
