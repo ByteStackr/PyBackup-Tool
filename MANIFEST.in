@@ -1,0 +1,6 @@
+include README.md
+include LICENSE
+include example_pybackup.json
+include *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
