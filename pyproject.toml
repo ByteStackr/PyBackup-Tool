@@ -1,33 +1,32 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "PyBackup-Tool"
-version = "1.0.0"
-description = "Zero-dependency Python backup tool with configuration file support"
+dynamic = ["version"]
+description = "Zero-dependency backup tool for codebases: verified archives, safe restore, project config files"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "ByteStackr", email = "229177070+ByteStackr@users.noreply.github.com"}]
 maintainers = [{name = "ByteStackr", email = "229177070+ByteStackr@users.noreply.github.com"}]
 keywords = ["backup", "cli", "tool", "zero-dependency", "configuration"]
 classifiers = [
-    "Development Status :: 5 - Production/Stable",
-    "Intended Audience :: Developers", 
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.6",
-    "Programming Language :: Python :: 3.7", 
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: System :: Archiving :: Backup",
     "Topic :: Utilities"
 ]
-requires-python = ">=3.6"
+requires-python = ">=3.8"
 dependencies = []
 
 [project.urls]
@@ -37,5 +36,12 @@ dependencies = []
 "Documentation" = "https://github.com/ByteStackr/PyBackup-Tool#readme"
 
 [project.scripts]
-pybackup-tool = "PyBackup_Tool:main"
-PyBackup-Tool = "PyBackup_Tool:main"
+pybackup-tool = "pybackuptool.cli:main"
+PyBackup-Tool = "pybackuptool.cli:main"
+
+[tool.setuptools]
+packages = ["pybackuptool"]
+py-modules = ["PyBackup_Tool"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pybackuptool.__version__"}

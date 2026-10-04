@@ -1,647 +1,362 @@
-# PyBackup_Tool.py - Complete User Guide
+# PyBackup-Tool
 
-## Overview
+![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-blue)
+![Dependencies: none](https://img.shields.io/badge/dependencies-none-brightgreen)
+![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
-PyBackup_Tool.py is a robust, zero-dependency backup solution for codebases with versioning-like features. It creates compressed archives with metadata tracking, supports project-specific configurations, and provides comprehensive backup management capabilities.
+Snapshot a codebase into a verified archive, and get it back intact. One command to back up, one to restore, nothing to install besides Python.
 
-## Features
+![Back up, list, verify and restore in four commands](docs/images/demo.gif)
 
-- **Zero Dependencies** - Uses only Python standard library
-- **Cross-Platform** - Works on Windows, Linux, macOS
-- **Configuration Files** - Project-specific backup settings
-- **Dynamic Filenames** - Custom naming with variables
-- **Integrity Verification** - SHA256 checksums and validation
-- **Flexible Filtering** - Include/exclude patterns
-- **Metadata Tracking** - JSON-based backup information
-- **AI Summary Support** - External summary integration
-- **Cleanup Policies** - Automatic old backup removal
+## What it does
 
-## Quick Start
+- **Backs up a project** into a single `tar.gz` (or `tar.xz`, `tar.bz2`, `tar`) with a name, a summary and a timestamp.
+- **Hashes every file** (SHA-256) while it is being archived and stores the hashes inside the archive.
+- **Verifies** a backup at any time, and again automatically on every restore.
+- **Restores safely**: never writes outside the target directory, never overwrites existing files unless you say so.
+- **Filters** with `.gitignore`-style include and exclude patterns.
+- **Remembers settings per project** in a `.pybackup.json` you can commit.
+- **Cleans up old backups** only when asked, and always keeps the newest one.
 
-### 1. Basic Usage (Traditional CLI)
+It uses the Python standard library only. Works on Windows, Linux and macOS with Python 3.8 or newer.
 
-```bash
-# Create a backup
-python PyBackup_Tool.py backup /path/to/source -d ./backups -n "My Project" -s "Project backup"
+## Contents
 
-# List all backups
-python PyBackup_Tool.py list -d ./backups
+- [Install](#install)
+- [Quick start](#quick-start)
+- [A tour in screenshots](#a-tour-in-screenshots)
+- [Commands](#commands)
+- [Project config file](#project-config-file)
+- [Patterns](#patterns)
+- [How your data is protected](#how-your-data-is-protected)
+- [What is stored where](#what-is-stored-where)
+- [Using it from scripts](#using-it-from-scripts)
+- [Upgrading from 1.x](#upgrading-from-1x)
+- [Development](#development)
 
-# Restore a backup
-python PyBackup_Tool.py restore backup_20250906_143022_abc123 ./restore -d ./backups
-```
-
-### 2. Configuration File Usage (Recommended)
-
-```bash
-# Create sample configuration
-python PyBackup_Tool.py init-config
-
-# Edit .pybackup.json to customize settings
-# Then create backup using config
-python PyBackup_Tool.py backup
-```
-
-## Installation
-
-No installation required! Simply download `PyBackup_Tool.py` and run with Python 3.6+.
+## Install
 
 ```bash
-# Check Python version
-python --version
-
-# Make executable (Linux/macOS)
-chmod +x PyBackup_Tool.py
-
-# Run directly
-python PyBackup_Tool.py --help
+pip install git+https://github.com/ByteStackr/PyBackup-Tool.git
 ```
 
-## Command Reference
+This gives you the `pybackup-tool` command. Releases are also published to PyPI as `PyBackup-Tool`; `pip install PyBackup-Tool` gets the latest released version, which may be older than this repository.
 
-### Global Options
+No install at all also works: clone the repository and run the launcher.
 
 ```bash
--h, --help     Show help message
--v, --verbose  Enable verbose output
--q, --quiet    Suppress output except errors
+git clone https://github.com/ByteStackr/PyBackup-Tool.git
+python PyBackup-Tool/PyBackup_Tool.py --help
 ```
 
-### Commands
+Everywhere below, `pybackup-tool` and `python PyBackup_Tool.py` are interchangeable.
 
-#### `backup` - Create Backup
+## Quick start
 
-**Using Configuration File:**
-```bash
-python PyBackup_Tool.py backup                    # Auto-find config file
-python PyBackup_Tool.py backup --config my.json  # Use specific config
-```
-
-**Traditional CLI:**
-```bash
-python PyBackup_Tool.py backup SOURCE_PATH -d DESTINATION [OPTIONS]
-
-Options:
-  -d, --destination DIR    Backup destination directory
-  -n, --name NAME         Human-readable backup name
-  -s, --summary TEXT      Backup summary/description
-```
-
-**Examples:**
-```bash
-# Simple backup
-python PyBackup_Tool.py backup ./myproject -d ./backups
-
-# Backup with metadata
-python PyBackup_Tool.py backup ./src -d /backup/location -n "Production Build" -s "Pre-deployment backup"
-
-# Using config file
-python PyBackup_Tool.py backup
-```
-
-#### `list` - List Backups
+**One-off backup of a directory**
 
 ```bash
-python PyBackup_Tool.py list -d BACKUP_LOCATION [OPTIONS]
-
-Options:
-  -d, --destination DIR    Backup location
-  --format FORMAT         Output format (table, json, simple)
+pybackup-tool backup ./myapp -d ./backups -n "Before refactor"
+pybackup-tool list -d ./backups
+pybackup-tool restore latest ./myapp-restored -d ./backups
 ```
 
-**Examples:**
-```bash
-# Table format (default)
-python PyBackup_Tool.py list -d ./backups
-
-# JSON format
-python PyBackup_Tool.py list -d ./backups --format json
-
-# Simple format
-python PyBackup_Tool.py list -d ./backups --format simple
-```
-
-#### `restore` - Restore Backup
+**Per-project setup (recommended)**
 
 ```bash
-python PyBackup_Tool.py restore BACKUP_ID TARGET_PATH -d BACKUP_LOCATION [OPTIONS]
-
-Options:
-  -d, --destination DIR    Backup location (required)
-  --no-verify             Skip checksum verification
+cd myapp
+pybackup-tool init-config     # writes .pybackup.json
+pybackup-tool backup          # uses it
+pybackup-tool list            # the destination comes from the config too
 ```
 
-**Examples:**
-```bash
-# Restore with verification
-python PyBackup_Tool.py restore backup_20250906_143022_abc123 ./restored -d ./backups
+`.pybackup.json` is found from any subdirectory of the project, so `pybackup-tool backup` works wherever you are inside it.
 
-# Restore without verification
-python PyBackup_Tool.py restore backup_20250906_143022_abc123 ./restored -d ./backups --no-verify
-```
+## A tour in screenshots
 
-#### `add-summary` - Add Summary
+### Create a backup, then list
 
-```bash
-python PyBackup_Tool.py add-summary BACKUP_ID "SUMMARY TEXT" -d BACKUP_LOCATION
-```
+Every backup gets an ID. Anywhere an ID is expected you can also write `latest`, the start of an ID, or the archive file name.
 
-**Examples:**
-```bash
-# Add AI-generated summary
-python PyBackup_Tool.py add-summary backup_20250906_143022_abc123 "Flask web app with user authentication" -d ./backups
+![Creating a backup and listing backups](docs/images/backup-and-list.png)
 
-# Update existing summary
-python PyBackup_Tool.py add-summary backup_20250906_143022_abc123 "Updated: Added payment integration" -d ./backups
-```
+The orange line is deliberate: `.env` files are excluded by default because they usually hold secrets, and the tool tells you so instead of leaving them out silently. Remove `.env` from `exclude_patterns` if you want them in.
 
-#### `verify` - Verify Backup
+### Preview before writing anything
 
-```bash
-python PyBackup_Tool.py verify BACKUP_ID -d BACKUP_LOCATION
-```
+`--dry-run` shows what would be backed up. Add `-v` to list every file and every excluded path.
 
-**Examples:**
-```bash
-# Verify backup integrity
-python PyBackup_Tool.py verify backup_20250906_143022_abc123 -d ./backups
-```
+![Dry run listing included files and excluded paths](docs/images/dry-run.png)
 
-#### `cleanup` - Clean Old Backups
+### Restore
 
-```bash
-python PyBackup_Tool.py cleanup -d BACKUP_LOCATION [OPTIONS]
+A restore checks the archive hash first and every file hash afterwards. It refuses to write into a directory that already has content unless you pass `--force`. `--only` restores a subset.
 
-Options:
-  -d, --destination DIR    Backup location (required)
-  --max-age DAYS          Maximum age in days
-  --keep-count COUNT      Keep last N backups
-```
+![Restore, refusal to overwrite, and partial restore](docs/images/restore.png)
 
-**Examples:**
-```bash
-# Remove backups older than 30 days
-python PyBackup_Tool.py cleanup -d ./backups --max-age 30
+### Cleanup preview, index recovery, corruption detection
 
-# Keep only last 5 backups
-python PyBackup_Tool.py cleanup -d ./backups --keep-count 5
+`cleanup --dry-run` shows what would be deleted. If the index file is damaged, the tool stops instead of guessing, and `reindex` rebuilds it from the archives. `verify` pinpoints a corrupted archive.
 
-# Combine both policies
-python PyBackup_Tool.py cleanup -d ./backups --max-age 60 --keep-count 10
-```
+![Cleanup preview, reindex after a damaged index, and a failed verification](docs/images/recovery.png)
 
-#### `configure` - Tool Configuration
+## Commands
+
+`-v` (verbose) and `-q` (quiet) work before or after any command. `-d DIR` is the backup directory; when omitted, the destination of the project config is used, then the global default.
+
+| Command | What it does |
+|---|---|
+| `backup [SOURCE ...]` | Create a backup. Without sources it uses `.pybackup.json`. |
+| `list` | List backups, newest first. `--format table\|json\|simple` |
+| `restore ID TARGET` | Restore a backup into `TARGET`. |
+| `verify ID` / `verify --all` | Check the archive hash and every file hash. |
+| `add-summary ID "text"` | Set or replace the summary of a backup. |
+| `cleanup` | Delete old backups by count and/or age. |
+| `reindex` | Rebuild the index from the archives in the destination. |
+| `configure` | Show or change global settings. |
+| `init-config` | Write a sample `.pybackup.json`. |
+
+### backup
 
 ```bash
-python PyBackup_Tool.py configure [OPTIONS]
-
-Options:
-  --default-destination DIR    Set default backup destination
-  --max-backups COUNT         Set maximum number of backups to keep
+pybackup-tool backup                                    # from .pybackup.json
+pybackup-tool backup --config path/to/config.json
+pybackup-tool backup ./src ./docs -d ./backups          # several sources
+pybackup-tool backup ./src -d ./backups --exclude "*.log" --exclude "tmp/"
+pybackup-tool backup ./src -d ./backups --format tar.xz --level 9
 ```
 
-**Examples:**
+| Option | Meaning |
+|---|---|
+| `-n NAME`, `-s TEXT` | Name and summary shown by `list`. |
+| `--include PATTERN` | Repeatable. Default: everything. |
+| `--exclude PATTERN` | Repeatable. Replaces the default excludes. |
+| `--format` | `tar.gz` (default), `tar.xz`, `tar.bz2`, `tar`. |
+| `--level 0-9` | Compression level, default 6. |
+| `--dry-run` | Show what would be backed up, write nothing. |
+| `--verify` | Re-read the finished archive and check every hash. |
+| `--allow-partial` | Exit 0 even if some files could not be read. |
+
+With several sources, each one becomes a top-level folder in the archive. `--include`, `--exclude`, `--format`, `--level` and `-d` belong to command-line backups; with a project config, set them in the file.
+
+### restore
+
 ```bash
-# Show current configuration
-python PyBackup_Tool.py configure
-
-# Set default destination
-python PyBackup_Tool.py configure --default-destination ./backups
-
-# Set max backups
-python PyBackup_Tool.py configure --max-backups 15
+pybackup-tool restore latest ./restored -d ./backups
+pybackup-tool restore backup_20250906_143022_abc123 ./restored -d ./backups
+pybackup-tool restore latest ./restored -d ./backups --only "src/" --only "*.md"
+pybackup-tool restore latest ./myapp -d ./backups --force      # into existing files
 ```
 
-#### `init-config` - Create Configuration File
+`--no-verify` skips the hash checks; use it only to salvage what is readable from a damaged archive.
+
+### cleanup
 
 ```bash
-python PyBackup_Tool.py init-config [OPTIONS]
-
-Options:
-  --output FILENAME    Output file name (default: .pybackup.json)
+pybackup-tool cleanup -d ./backups --keep-count 5             # keep the newest 5
+pybackup-tool cleanup -d ./backups --max-age 30               # delete older than 30 days
+pybackup-tool cleanup -d ./backups --max-age 30 --dry-run     # preview
 ```
 
-**Examples:**
+The newest complete backup is never deleted, whatever the age limit says. Raise that floor with `--min-keep N`.
+
+### configure
+
 ```bash
-# Create default config file
-python PyBackup_Tool.py init-config
-
-# Create custom config file
-python PyBackup_Tool.py init-config --output myproject-backup.json
+pybackup-tool configure                                  # show settings
+pybackup-tool configure --default-destination ~/backups
+pybackup-tool configure --auto-cleanup on --max-backups 15
 ```
 
-## Configuration File Format
+Global settings live in `~/.pybackup_config.json` and apply to backups made without a project config. Automatic cleanup is off unless you turn it on.
 
-### Sample .pybackup.json
+## Project config file
+
+`pybackup-tool init-config` writes a file like this one. Every key is optional.
 
 ```json
 {
     "backup_name": "MyProject Backup",
     "source_paths": ["."],
     "destination": "./backups",
-    "filename_format": "{DDMMYY}_MyProject_Backup_{SrNo}",
+    "filename_format": "{YYYY-MM-DD}_{project_name}_v{SrNo}",
     "archive_format": "tar.gz",
-    "include_patterns": [
-        "src/**/*",
-        "*.py", "*.js", "*.html", "*.css",
-        "package.json", "requirements.txt",
-        "README.md", "LICENSE"
-    ],
-    "exclude_patterns": [
-        ".git/*",
-        "node_modules/*",
-        "__pycache__/*",
-        "*.pyc", "*.pyo",
-        ".env*",
-        "*.log", "*.tmp",
-        ".vscode/*", ".idea/*",
-        "backups/*",
-        ".pybackup.json"
-    ],
     "compression_level": 6,
-    "generate_checksums": true,
+    "include_patterns": ["*"],
+    "exclude_patterns": [".git/", "node_modules/", "__pycache__/", "*.pyc", ".env", ".env.*", "*.log"],
     "auto_cleanup": {
-        "enabled": true,
-        "max_backups": 15,
-        "max_age_days": 60
+        "enabled": false,
+        "max_backups": 10,
+        "max_age_days": null,
+        "min_keep": 1
     },
     "summary": {
-        "auto_generate": false,
         "default_summary": "Automated backup of {project_name}"
     }
 }
 ```
 
-### Configuration Options
+| Key | Meaning |
+|---|---|
+| `backup_name` | Name shown by `list`. |
+| `source_paths` | Directories or files to back up, relative to the config file. |
+| `destination` | Where archives go, relative to the config file. It is never backed up into itself. |
+| `filename_format` | Archive name template, see below. An existing archive is never overwritten; a clash gets `_2`, `_3`, ... |
+| `archive_format` | `tar.gz`, `tar.xz`, `tar.bz2` or `tar`. |
+| `compression_level` | 0 (fastest) to 9 (smallest). |
+| `include_patterns`, `exclude_patterns` | See [Patterns](#patterns). |
+| `auto_cleanup` | Runs after each successful backup when `enabled` is true. Skipped if the backup was incomplete. |
+| `summary.default_summary` | Summary template; `-s` on the command line overrides it. |
+| `project_name` | Value of `{project_name}`. Default: the folder holding the config. |
 
-#### Basic Settings
-- **`backup_name`** - Human-readable name for backups
-- **`source_paths`** - Array of directories to backup (relative to config file)
-- **`destination`** - Where to store backup archives
-- **`filename_format`** - Custom filename with variables
-- **`archive_format`** - Archive type (currently only "tar.gz")
-- **`compression_level`** - Gzip compression level (0-9, default: 6)
+Keys starting with `_` are ignored, so they can serve as comments. A fuller example is in [example_pybackup.json](example_pybackup.json).
 
-#### File Filtering
-- **`include_patterns`** - Files/patterns to include (supports wildcards)
-- **`exclude_patterns`** - Files/patterns to exclude (takes precedence)
+### File name variables
 
-#### Advanced Options
-- **`generate_checksums`** - Calculate SHA256 checksums (true/false)
-- **`auto_cleanup`** - Automatic cleanup policies
-- **`summary`** - Default summary settings
+| Variable | Example |
+|---|---|
+| `{YYYY-MM-DD}` | `2025-09-06` |
+| `{DDMMYY}` / `{YYMMDD}` | `060925` / `250906` |
+| `{HH-MM-SS}` | `14-30-22` |
+| `{timestamp}` | `1757169022` |
+| `{SrNo}` or `{counter}` | `1`, `2`, `3`, ... per destination |
+| `{project_name}` | `myapp` |
+| `{branch}` | current git branch, or `no-branch` |
 
-### Filename Format Variables
+`"{project_name}_{YYYY-MM-DD}_v{SrNo}"` produces `myapp_2025-09-06_v1.tar.gz`. A misspelled variable is reported as an error.
 
-Use these variables in `filename_format`:
+## Patterns
 
-#### Date/Time Variables
-- **`{DDMMYY}`** - Day/Month/Year (e.g., "060925")
-- **`{YYMMDD}`** - Year/Month/Day (e.g., "250906")
-- **`{YYYY-MM-DD}`** - Full date (e.g., "2025-09-06")
-- **`{HH-MM-SS}`** - Time (e.g., "14-30-22")
-- **`{timestamp}`** - Unix timestamp
+Patterns follow `.gitignore` conventions.
 
-#### Counter Variables
-- **`{SrNo}`** - Sequential number (1, 2, 3...)
-- **`{counter}`** - Same as SrNo
+| Pattern | Matches |
+|---|---|
+| `*.log` | Any file or folder named like that, at any depth. |
+| `node_modules/` | Any folder with that name, at any depth, and everything in it. |
+| `docs/*.md` | Markdown files directly in the top-level `docs` folder. A pattern containing `/` is anchored to the source root. |
+| `src/**/*.py` | Python files anywhere below `src`. `**` crosses folders, `*` does not. |
+| `src/` | As an include: everything below `src`. |
+| `*.{js,ts}` | Either extension. |
+| `file[0-9].txt` | Character classes. |
+| `!.env.example` | In excludes only: re-include a file excluded by an earlier pattern. |
 
-#### Project Variables
-- **`{project_name}`** - Current directory name
-- **`{branch}`** - Git branch name (if available)
+Rules:
 
-**Examples:**
-```json
-"filename_format": "{DDMMYY}_Backup_{SrNo}"                    // 060925_Backup_1.tar.gz
-"filename_format": "{project_name}_{YYYY-MM-DD}_{counter}"     // MyProject_2025-09-06_1.tar.gz
-"filename_format": "{branch}_{timestamp}_backup"              // main_1725610800_backup.tar.gz
+1. A file is backed up if it matches an include pattern and no exclude pattern. Excludes win.
+2. An excluded folder is never entered, so nothing inside it can be re-included. Write `.vscode/*` followed by `!.vscode/settings.json`, not `.vscode/`.
+3. On Windows, matching ignores case.
+4. Symlinks are stored as links and not followed.
+
+Default excludes: `.git/`, `node_modules/`, `__pycache__/`, `*.pyc`, `*.pyo`, `*.pyd`, `.env`, `.env.*`, `*.log`, `*.tmp`, `.DS_Store`, `Thumbs.db`, `*.swp`, `*.swo`, `.vscode/`, `.idea/`.
+
+## How your data is protected
+
+| Risk | What the tool does |
+|---|---|
+| A file cannot be read during backup | The backup is marked incomplete, the file is named on stderr, the exit code is 2. Never a silent gap. |
+| A file shrinks or fails mid-read | Same as above; the damaged copy is not restored. |
+| Crash or Ctrl+C mid-backup | Archives and the index are written to a temporary file and renamed when complete. No truncated files are left behind. |
+| Damaged index file | Commands stop with an error instead of starting an empty index over it. `reindex` rebuilds it; the damaged file is kept, renamed. |
+| Bit rot in an archive | `verify` and `restore` compare the archive hash and every file hash. |
+| Hostile or broken archive | Restore rejects absolute paths, `..`, hard links, device files, and symlinks leaving the target. |
+| Restoring over existing work | Refused unless `--force`. |
+| Two backups running at once | A lock file in the destination makes the second one stop. |
+| Overeager cleanup | Off by default, previewable with `--dry-run`, never deletes the newest complete backup, never runs after an incomplete backup. |
+| Backing up the backups | The destination directory is always skipped, wherever it is. |
+
+Not included: encryption and incremental backups. Each backup is a full, plain archive that any `tar` can open.
+
+## What is stored where
+
+```
+backups/
+├── backups_metadata.json                    index: one summary entry per backup
+├── backup_20250906_143022_abc123.tar.gz     archive
+└── 2025-09-06_myapp_v2.tar.gz               archive named by filename_format
 ```
 
-## File Filtering Patterns
+Each archive ends with `.pybackup-manifest.json`, which lists every file with its size and SHA-256, the backup's name, summary, time and patterns, and any file that could not be backed up. Because the manifest travels inside the archive, a single archive file is enough to verify and restore, and enough for `reindex` to rebuild the index.
 
-### Include Patterns
-Specify what files to include in backups:
-
-```json
-"include_patterns": [
-    "*",                    // Include all files (default)
-    "src/**/*",            // All files in src directory and subdirectories
-    "*.py",                // All Python files
-    "*.{js,ts,jsx,tsx}",   // JavaScript/TypeScript files
-    "docs/*.md"            // Markdown files in docs directory
-]
-```
-
-### Exclude Patterns
-Specify what files to exclude (takes precedence over includes):
-
-```json
-"exclude_patterns": [
-    ".git/*",              // Git directory
-    "node_modules/*",      // Node.js dependencies
-    "__pycache__/*",       // Python cache
-    "*.pyc",               // Compiled Python files
-    "*.log",               // Log files
-    ".env*",               // Environment files
-    "tmp/*",               // Temporary directory
-    "backups/*"            // Don't backup the backup directory!
-]
-```
-
-### Pattern Syntax
-- **`*`** - Match any characters except directory separator
-- **`**`** - Match any characters including directory separators
-- **`?`** - Match single character
-- **`[abc]`** - Match any character in brackets
-- **`{a,b,c}`** - Match any of the comma-separated patterns
-
-## Workflows
-
-### 1. Personal Project Backup
-
-```bash
-# Setup
-cd myproject
-python PyBackup_Tool.py init-config
-# Edit .pybackup.json as needed
-
-# Daily backup
-python PyBackup_Tool.py backup
-
-# View backups
-python PyBackup_Tool.py list -d ./backups
-
-# Restore if needed
-python PyBackup_Tool.py restore backup_id ./recovery -d ./backups
-```
-
-### 2. Team Project with Version Control
-
-```bash
-# Setup (commit .pybackup.json to git)
-python PyBackup_Tool.py init-config
-git add .pybackup.json
-git commit -m "Add backup configuration"
-
-# Each team member can now:
-python PyBackup_Tool.py backup  # Uses same config
-```
-
-### 3. Automated Backup Script
-
-```bash
-#!/bin/bash
-# backup.sh - Automated daily backup
-
-cd /path/to/project
-python PyBackup_Tool.py backup
-
-# Add AI summary (example with external tool)
-BACKUP_ID=$(python PyBackup_Tool.py list -d ./backups --format json | jq -r '.[0].id')
-SUMMARY=$(ai-summarize-tool /path/to/project)
-python PyBackup_Tool.py add-summary "$BACKUP_ID" "$SUMMARY" -d ./backups
-
-# Cleanup old backups
-python PyBackup_Tool.py cleanup -d ./backups --max-age 30
-```
-
-### 4. CI/CD Integration
-
-```yaml
-# .github/workflows/backup.yml
-name: Backup
-on:
-  push:
-    branches: [main]
-
-jobs:
-  backup:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v2
-    - name: Create backup
-      run: |
-        python PyBackup_Tool.py backup . -d /backup/storage -n "CI Build ${{ github.run_number }}"
-    - name: Cleanup old backups
-      run: |
-        python PyBackup_Tool.py cleanup -d /backup/storage --keep-count 10
-```
-
-## Metadata and Storage
-
-### Backup Metadata Structure
-
-Each backup destination contains a `backups_metadata.json` file:
+The index keeps only summaries, so it stays small however many files you back up:
 
 ```json
 {
-    "backups": [
-        {
-            "id": "backup_20250906_143022_abc123",
-            "timestamp": "2025-09-06T14:30:22Z",
-            "source_path": "/path/to/source",
-            "archive_name": "backup_20250906_143022_abc123.tar.gz",
-            "name": "My Project Backup",
-            "file_count": 1247,
-            "total_size": 52428800,
-            "compressed_size": 12582912,
-            "summary": "Flask web application with user authentication",
-            "summary_updated": "2025-09-06T14:35:00Z",
-            "checksums": {...},
-            "include_patterns": ["*"],
-            "exclude_patterns": [".git/*", "node_modules/*"]
-        }
-    ],
-    "config": {...},
-    "created": "2025-09-06T14:30:22Z",
-    "last_modified": "2025-09-06T14:35:00Z",
-    "version": "1.0"
+    "id": "backup_20250906_143022_abc123",
+    "timestamp": "2025-09-06T14:30:22+00:00",
+    "name": "Before refactor",
+    "summary": "Stable state",
+    "archive_name": "backup_20250906_143022_abc123.tar.gz",
+    "archive_sha256": "9f2c...",
+    "file_count": 1247,
+    "total_size": 52428800,
+    "compressed_size": 12582912,
+    "partial": false
 }
 ```
 
-### Directory Structure
+## Using it from scripts
 
-```
-backup_destination/
-├── backups_metadata.json          # Metadata for all backups
-├── backup_20250906_143022_abc123.tar.gz    # Backup archive
-├── backup_20250906_150500_def456.tar.gz    # Another backup
-└── backup_20250906_172000_ghi789.tar.gz    # Latest backup
-```
-
-## Advanced Usage
-
-### Custom Configuration File Location
+Exit codes: `0` success, `1` error, `2` backup written but incomplete.
 
 ```bash
-# Use specific config file
-python PyBackup_Tool.py backup --config /path/to/custom.json
-
-# Config file search order:
-# 1. --config specified file
-# 2. .pybackup.json in current directory
-# 3. .pybackup in current directory
-# 4. Walk up directory tree looking for config files
-# 5. Stop at git root or filesystem root
+#!/bin/sh
+# Nightly backup with a verification pass; cron mails any output on failure.
+cd /path/to/project || exit 1
+pybackup-tool -q backup --verify || echo "backup problem, exit code $?"
+pybackup-tool -q cleanup --keep-count 14 --max-age 90
 ```
 
-### Multiple Source Paths
-
-```json
-{
-    "source_paths": [
-        "src",
-        "docs",
-        "config",
-        "../shared/common"
-    ]
-}
-```
-*Note: Currently only the first source path is used. Multiple paths support is planned for future versions.*
-
-### Integration with External AI Tools
+Attach a summary afterwards, for example one generated by another tool:
 
 ```bash
-# Example: Generate summary with external AI tool
-BACKUP_ID=$(python PyBackup_Tool.py backup | grep "Backup created" | cut -d: -f2 | tr -d ' ')
-SUMMARY=$(curl -X POST "https://api.openai.com/v1/completions" \
-  -H "Authorization: Bearer $OPENAI_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"model":"gpt-3.5-turbo","prompt":"Analyze this codebase and provide a 4-line summary..."}' \
-  | jq -r '.choices[0].text')
-python PyBackup_Tool.py add-summary "$BACKUP_ID" "$SUMMARY" -d ./backups
+pybackup-tool add-summary latest "Added payment integration" -d ./backups
 ```
 
-### Backup Verification Workflow
+Machine-readable listing:
 
 ```bash
-# Create backup
-BACKUP_ID=$(python PyBackup_Tool.py backup | grep "successfully" | cut -d: -f2 | tr -d ' ')
-
-# Verify immediately
-python PyBackup_Tool.py verify "$BACKUP_ID" -d ./backups
-
-# Test restore to temporary location
-mkdir temp_restore
-python PyBackup_Tool.py restore "$BACKUP_ID" temp_restore -d ./backups
-# ... test restored files ...
-rm -rf temp_restore
+pybackup-tool list -d ./backups --format json
 ```
 
-## Troubleshooting
+From Python:
 
-### Common Issues
+```python
+from pybackuptool import BackupManager
 
-#### 1. Permission Errors
+manager = BackupManager()
+result = manager.create_backup("./myapp", "./backups", name="From Python")
+print(result["id"], result["file_count"], result["partial"])
+manager.restore_backup(result["id"], "./backups", "./restored")
+```
+
+## Upgrading from 1.x
+
+Backups made by 1.x still list, verify and restore. Things that behave differently:
+
+| 1.x | 2.0 |
+|---|---|
+| Old backups were deleted automatically (10 kept) | Nothing is deleted unless cleanup is enabled or run. |
+| `filename_format` was ignored | It names the archive. |
+| Only the first `source_paths` entry was used | All are backed up. |
+| `compression_level` was ignored (always 9) | It is applied. |
+| Include patterns such as `src/**/*` or `*.py` skipped subfolders | They match as documented. |
+| Unreadable files produced a warning and exit code 0 | Exit code 2, backup marked incomplete. |
+| Restore overwrote existing files | Needs `--force`. |
+| `source_paths` were relative to the current directory | Relative to the config file. |
+| `init-config` asked before overwriting | Use `--force`. |
+| `generate_checksums` option | Ignored; hashing is always on and costs no extra read. |
+| Python 3.6+ | Python 3.8+. |
+| Single file `PyBackup_Tool.py` | Package `pybackuptool`; `PyBackup_Tool.py` remains as a launcher. |
+
+## Development
+
 ```bash
-# Error: Permission denied
-# Solution: Check file/directory permissions
-ls -la /path/to/backup/destination
-chmod 755 /path/to/backup/destination
+python -m unittest discover -s test -v     # run the tests
+python docs/make_demo.py                   # regenerate README images (needs Pillow)
 ```
 
-#### 2. Large File Handling
-```bash
-# Error: Archive too large / Memory error
-# Solution: Exclude large files or directories
-{
-    "exclude_patterns": [
-        "*.mp4", "*.avi", "*.mkv",  // Video files
-        "*.iso", "*.dmg",           // Disk images
-        "data/large_datasets/*",    // Large data directories
-        "node_modules/*"            // Dependencies
-    ]
-}
-```
-
-#### 3. Config File Not Found
-```bash
-# Error: No configuration file found
-# Solution: Create config file or specify source path
-python PyBackup_Tool.py init-config
-# OR
-python PyBackup_Tool.py backup /path/to/source -d ./backups
-```
-
-#### 4. Checksum Verification Failures
-```bash
-# Error: Checksum mismatch during restore
-# Solution: Re-create backup or restore without verification
-python PyBackup_Tool.py restore backup_id ./restore -d ./backups --no-verify
-```
-
-#### 5. Windows Path Issues
-```bash
-# Error: Path issues on Windows
-# Solution: Use forward slashes in config files
-{
-    "destination": "./backups",        // Good
-    "source_paths": ["./src"]          // Good
-}
-```
-
-### Performance Tips
-
-#### 1. Exclude Unnecessary Files
-```json
-"exclude_patterns": [
-    ".git/*",           // Version control
-    "node_modules/*",   // Dependencies (can be reinstalled)
-    "*.log",           // Log files
-    "tmp/*",           // Temporary files
-    "__pycache__/*",   // Compiled files
-    "*.pyc",
-    ".env*",           // Environment files (contain secrets)
-    "coverage/*",      // Test coverage reports
-    "dist/*",          // Build artifacts
-    ".tox/*"           // Testing environments
-]
-```
-
-#### 2. Optimize Compression
-```json
-{
-    "compression_level": 1    // Faster, larger files
-    // OR
-    "compression_level": 9    // Slower, smaller files
-    // Default: 6 (good balance)
-}
-```
-
-#### 3. Skip Checksums for Large Backups
-```json
-{
-    "generate_checksums": false    // Faster backup, no verification
-}
-```
-
-### Debugging
-
-#### Enable Verbose Output
-```bash
-python PyBackup_Tool.py backup -v    # Verbose mode
-python PyBackup_Tool.py list -d ./backups -v
-```
-
-#### Check Backup Contents Without Restoring
-```bash
-# List archive contents (requires manual implementation)
-tar -tzf ./backups/backup_20250906_143022_abc123.tar.gz | head -20
-```
-
-#### Validate Configuration File
-```bash
-# Check JSON syntax
-python -m json.tool .pybackup.json > /dev/null && echo "Valid JSON" || echo "Invalid JSON"
-
-# Test configuration
-python PyBackup_Tool.py backup --config .pybackup.json -v
-```
+The code is in `pybackuptool/`: `filters.py` (patterns and scanning), `archive.py` (writing, verifying, extracting), `metadata.py` (index and lock), `config.py` (settings and config files), `manager.py` (operations), `cli.py` (command line).
 
 ## License
 
-This tool is provided as-is under the MIT License. You're free to modify and distribute it according to your needs.
-
----
-
-**PyBackup_Tool.py** - Your reliable, zero-dependency backup solution! 🚀
+MIT. See [LICENSE](LICENSE).

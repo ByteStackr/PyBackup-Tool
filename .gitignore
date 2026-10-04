@@ -35,3 +35,12 @@ venv/
 # Logs
 *.log
 logs/
+
+# Build output
+build/
+dist/
+*.egg-info/
+
+# PyBackup-Tool work files
+*.partial
+.pybackup.lock
